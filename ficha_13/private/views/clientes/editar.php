@@ -6,6 +6,7 @@
 // --------------------------------------------------------------------
 require_once __DIR__ . '/../../includes/funcoes.php';
 redirect_if_not_logged(); // Inicia a sessão (se necessário) e verifica se o utilizador está autenticado 
+require_once __DIR__ . '/../../includes/validacoes.php';
 
 if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST'])) {
     header('Location: ' . BASE_URL . '/public/login.php');
@@ -18,6 +19,52 @@ $idClient = aes_decrypt($idClientEncrypted);
 if (!$idClient || !is_numeric($idClient)) {
     header('Location: ' . BASE_URL . '/private/views/clientes/lista.php');
     exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $novoNome = $_POST['nome_cliente'] ?? '';
+    $novoEmail = $_POST['email_cliente'] ?? '';
+    $novaMorada = $_POST['morada_cliente'] ?? '';
+    $novoTelefone = $_POST['tel_cliente'] ?? '';
+
+    $erros = array_merge(
+        validar_nome($novoNome),
+        validar_email($novoEmail),
+        validar_morada($novaMorada),
+        validar_telefone($novoTelefone)
+    );
+
+    if (empty($erros)) {
+        try {
+            $ligacao = new PDO(
+                "mysql:host=" . MYSQL_HOST . ";dbname=" . MYSQL_DATABASE . ";charset=utf8",
+                MYSQL_USERNAME,
+                MYSQL_PASSWORD
+            );
+            $ligacao->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $stmt = $ligacao->prepare("UPDATE clientes SET nome = :nome WHERE id = :id");
+            $stmt = $ligacao->prepare("
+                UPDATE clientes
+                SET nome = :nome,
+                email = :email,
+                morada = :morada,
+                telefone = :telefone
+                WHERE id = :id
+                ");
+
+            $stmt->bindParam(':nome', $novoNome, PDO::PARAM_STR);
+            $stmt->bindParam(':email', $novoEmail, PDO::PARAM_STR);
+            $stmt->bindParam(':morada', $novaMorada, PDO::PARAM_STR);
+            $stmt->bindParam(':telefone', $novoTelefone, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $idClient, PDO::PARAM_INT); // ou $
+            $stmt->execute();
+            // Mensagem de sucesso e redirecionamento (opcional)
+            header('Location: lista.php');
+            exit;
+        } catch (PDOException $err) {
+            $erro = "Erro ao atualizar o nome: " . $err->getMessage();
+        }
+    }
 }
 
 try {
@@ -64,7 +111,7 @@ $ligacao = null;
                         <h2 class="mb-4"><strong><i class="fa-solid fa-pen-to-square me-2"></i> Atualização de Dados
                                 CLIENTES</strong></h2>
                         <hr>
-                        <form action="#" method="post" novalidate>
+                        <form action="editar.php?id_cliente=<?= $idClientEncrypted ?>" method="post" novalidate>
                             <!-- Linhas e colunas com campos organizados -->
                             <div class="row mb-3">
                                 <div class="col-12">
@@ -164,9 +211,13 @@ $ligacao = null;
                                 </button>
                             </div>
                             <!-- Área de erros -->
-                            <div class="alert alert-danger text-center" role="alert">
-                                • Erro
-                            </div>
+                            <?php if (!empty($erros)): ?>
+                                <div class="alert alert-danger text-center" role="alert">
+                                    <?php foreach ($erros as $erro): ?>
+                                        <div><?= htmlspecialchars($erro) ?></div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </form>
                     </div>
                 </div>

@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/../../config/config.php';
 
 // Inicia a sessão se ainda não estiver iniciada
