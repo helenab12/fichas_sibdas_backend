@@ -19,6 +19,12 @@ require_once __DIR__ . '/../../config/config.php';
     rel="stylesheet">
   <link rel="stylesheet" href="/fichas_sibdas_backend/ficha_11/private/assets/fontawesome/all.min.css">
    
+  <!-- jQuery -->
+  <script src="/fichas_sibdas_backend/ficha_11/private/assets/jquery/jquery-3.6.0.min.js"></script>
+
+  <!-- DataTables CSS + JS -->
+  <link rel="stylesheet" href="/fichas_sibdas_backend/ficha_11/private/assets/datatables/datatables.min.css">
+  <script src="/fichas_sibdas_backend/ficha_11/private/assets/datatables/datatables.min.js"></script> 
 </head>
 
 <body>
