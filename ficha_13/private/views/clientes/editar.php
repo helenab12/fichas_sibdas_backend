@@ -13,11 +13,40 @@ if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST'])) {
 }
 
 // Recolhe o ID do cliente da URL
-$idClient = $_GET['id_cliente'] ?? null;
-if (!$idClient) {
+$idClientEncrypted = $_GET['id_cliente'] ?? null;
+$idClient = aes_decrypt($idClientEncrypted);
+if (!$idClient || !is_numeric($idClient)) {
     header('Location: ' . BASE_URL . '/private/views/clientes/lista.php');
     exit;
 }
+
+try {
+    $ligacao = new PDO(
+        "mysql:host=" . MYSQL_HOST . ";dbname=" . MYSQL_DATABASE . ";charset=utf8",
+        MYSQL_USERNAME,
+        MYSQL_PASSWORD
+    );
+
+    $ligacao->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);  // Preparar e executar a query com segurança
+
+    $stmt = $ligacao->prepare("SELECT * FROM clientes WHERE id = :id");
+    $stmt->bindParam(':id', $idClient, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $cliente = $stmt->fetch(PDO::FETCH_OBJ);
+    // Se não encontrou o cliente, redireciona
+    if (!$cliente) {
+        header('Location: ' . BASE_URL . '/private/views/clientes/lista.php');
+        exit;
+    }
+
+    //$erro = ''; apagar senao o erro nao e exibido
+} catch (PDOException $err) {
+    $erro = "Erro na ligação à base de dados.";
+    $cliente = null;
+}
+// Fecha a ligação
+$ligacao = null;
 
 ?>
 
@@ -41,7 +70,7 @@ if (!$idClient) {
                                 <div class="col-12">
                                     <label for="texto_nome" class="form-label">Nome Completo</label>
                                     <input type="text" class="form-control" id="texto_nome" name="nome_cliente"
-                                        value="Helena Barbosa" required>
+                                        value="<?= htmlspecialchars($cliente->nome) ?>" required>
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -49,7 +78,7 @@ if (!$idClient) {
                                     <label for="texto_endereco" class="form-label">Morada <small>(NºPorta,
                                             Andar)</small></label>
                                     <input type="text" class="form-control" id="texto_endereco"
-                                        name="morada_cliente" value="Rua da Palmilheira 1015">
+                                        name="morada_cliente" value="<?= htmlspecialchars($cliente->morada) ?>">
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -61,18 +90,18 @@ if (!$idClient) {
                                 <div class="col-md-3">
                                     <label for="texto_cidade" class="form-label">Cidade</label>
                                     <input type="text" class="form-control" id="texto_cidade" name="cid_cliente"
-                                        value="Porto" required>
+                                        value="<?= htmlspecialchars($cliente->cidade) ?>" required>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <label for="texto_cliente" class="form-label">Telefone</label>
                                 <input type="text" class="form-control" id="texto_cliente" name="tel_cliente"
-                                    value="912951772" required>
+                                    value="<?= htmlspecialchars($cliente->telefone) ?>" required>
                             </div>
                             <div class="col-md-3">
                                 <label for="texto_email" class="form-label">Email</label>
                                 <input type="email" class="form-control" id="texto_email" name="email_cliente"
-                                    value="helena.barbosa@email.com" required>
+                                    value="<?= htmlspecialchars($cliente->email) ?>" required>
                             </div>
 
                             <div class="row mb-3">
@@ -81,12 +110,12 @@ if (!$idClient) {
                                     <div>
                                         <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="radio" name="radio_gender"
-                                                id="radio_m" value="m" checked>
+                                                id="radio_m" value="m" <?= $cliente->sexo == 'm' ? 'checked' : '' ?>>
                                             <label class="form-check-label" for="radio_m">Masculino</label>
                                         </div>
                                         <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="radio" name="radio_gender"
-                                                id="radio_f" value="f">
+                                                id="radio_f" value="f" <?= $cliente->sexo == 'f' ? 'checked' : '' ?>>
                                             <label class="form-check-label" for="radio_f">Feminino</label>
                                         </div>
                                     </div>
@@ -94,7 +123,7 @@ if (!$idClient) {
                                 <div class="col-md-6">
                                     <label for="texto_dnasc" class="form-label">Data de nascimento</label>
                                     <input type="text" class="form-control" id="texto_dnasc" name="dnasc_cliente"
-                                        required>
+                                        value="<?= date('Y-m-d', strtotime($cliente->data_nascimento)) ?>" required>
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -109,7 +138,7 @@ if (!$idClient) {
                                 </div>
                                 <div class="col-md-4">
                                     <label for="texto_SSaude" class="form-label">Sistema de Saúde</label>
-                                    <input type="text" class="form-control" id="texto_SSaude" name="campo_opcao"
+                                    <input type="text" class="form-control" id="texto_SSaude" name="campo_opcao" value="<?= htmlspecialchars($cliente->sistema_saude) ?>"
                                         list="sistemasaude">
                                     <datalist id="sistemasaude">
                                         <option value="SNS">
